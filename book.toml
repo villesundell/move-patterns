@@ -1,0 +1,6 @@
+[book]
+authors = ["Ville Sundell / Solarius Intellectual Properties Ky"]
+language = "en"
+multilingual = false
+src = "src"
+title = "Move Patterns: Design Patterns for Resource Based Programming"
