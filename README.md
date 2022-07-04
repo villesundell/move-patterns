@@ -1,0 +1,1 @@
+**A book on Move programming language design patterns. Also available at [move-patterns.com](https://www.move-patterns.com/).**
