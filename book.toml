@@ -4,3 +4,10 @@ language = "en"
 multilingual = false
 src = "src"
 title = "Move Patterns: Design Patterns for Resource Based Programming"
+description = "Book on software design patterns for Move smart contract programming language."
+
+[output.html]
+git-repository-url = "https://github.com/villesundell/move-patterns"
+git-repository-icon = "fa-github"
+edit-url-template = "https://github.com/villesundell/move-patterns/edit/main/{path}"
+cname = "www.move-patterns.com"
