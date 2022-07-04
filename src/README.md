@@ -16,6 +16,10 @@ This book is for discussing software design paradigms and best practices for res
 
 This book is not a guide to Move or any other resource based language. For books on Move itself, see [this list](https://github.com/MystenLabs/awesome-move#books). Also see [awesome-move](https://github.com/MystenLabs/awesome-move) for a curated list of code and content from the Move programming language community.
 
+## Technical disclaimer
+
+Due to excessive hyperlink usage, this book is not optimized for printing as-is, at least for now. However, the book can be viewed in any digital format supporting hyperlinks, including PDF.
+
 ## License
 
 [![CC BY 4.0 license button][cc-by-png]][cc-by]
