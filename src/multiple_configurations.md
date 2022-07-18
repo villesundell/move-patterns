@@ -16,11 +16,11 @@ By incorporating this design into your modules, you would automatically add a la
 
 ## Examples
 
-Let's say you have an auction smart contract X. and an admin has created a configuration to account A. Then B could issue a transaction script to bid on C's resource like this:
+Let's say you have an auction smart contract X and an admin has created a configuration to account A. Then B could issue a transaction script to bid on C's resource like this:
 
-    X.place_bid(A, C, 1234);
+    X::place_bid(A, C, 1234);
 
-By accepting parameters (such as C and the amount 1234), a transaction script could trivially hide the selection of the configuration. This depends, how flexible the final script implementation is in terms of arguments to main(), but the transaction script could look like this (quick mock-up):
+By accepting parameters (such as C and the amount 1234), a transaction script could trivially hide the selection of the configuration. This depends, how flexible the final script implementation is in terms of arguments to `main()`, but the transaction script could look like this (quick mock-up):
 
     script {
         use 0xFF::X;
@@ -28,6 +28,6 @@ By accepting parameters (such as C and the amount 1234), a transaction script co
         const CONF: address = 0xCOFFEE;
 
         fun main(a: address, amount: XUS) {
-            X.place_bid(CONF, a, amount);
+            X::place_bid(CONF, a, amount);
         }
     }

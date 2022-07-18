@@ -6,11 +6,11 @@ The [Move language](https://github.com/move-language/move/) and its Move Virtual
 
 Today Move and its virtual machine are powering [multiple blockchains](https://github.com/MystenLabs/awesome-move#move-powered-blockchains), most of which are still in the early development phase.
 
-Because Move is currently the most used resource based programming language (especially for blockchains), code examples are written in Move. However it is likely that some of these patterns can be implemented also in some other resource based language and ecosystem.
+Because Move is currently the most widely developed resource based programming language for blockchains, code examples are written in Move. However it is likely that some of these patterns can be implemented also in some other resource based language and ecosystem.
 
 ## What this book is
 
-This book is for discussing software design paradigms and best practices for resource based languages, especially Move.
+This book is for discussing software design paradigms and best practices for resource based languages, especially Move and its flavors.
 
 ## What this book is not
 
@@ -18,7 +18,7 @@ This book is not a guide to Move or any other resource based language. For books
 
 ## Technical disclaimer
 
-Due to excessive hyperlink usage, this book is not optimized for printing as-is, at least for now. However, the book can be viewed in any digital format supporting hyperlinks, including PDF.
+This book is designed to be viewed digitally with hyperlink support (such as PDF or web format). For now the [full software pattern format](https://en.wikipedia.org/wiki/Software_design_pattern#Documentation) is not followed, instead the patterns are simply defined by a short summary and examples.
 
 ## License
 

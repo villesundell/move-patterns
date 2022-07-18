@@ -10,7 +10,7 @@
 
 ## Summary
 
-**Nestable Resources** provides a resource native approach to code reuse by building a nested structure of resources where each resource can be detached for use if the conditions are satisfied. For example, tokens can be placed to a time locked resource, which in turn can be placed to a resource which can be used only by a certain user, effectively creating a time locked NFT. For cleaner design it is recommended that the interfaces for wrapping and unwrapping match across modules.
+**Nestable Resources** pattern provides a resource native approach to code reuse by building a nested structure of resources where each resource can be detached for use if the conditions are satisfied. For example, tokens can be placed into a time locked resource, which in turn can be placed into a resource which can be used only by a certain user, effectively creating a timelocked non-fungible token. For cleaner design and easier integration it is recommended that the nestable resources share a common interface for wrapping and unwrapping.
 
 ## Examples
 

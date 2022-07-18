@@ -10,6 +10,6 @@
 
 ## Summary
 
-Move module following the **Accountless Design** pattern doesn't handle storage (`move_to()` / `move_from()`) directly, instead the storage must be handled outside the module in transaction scripts. This makes the module code footprint smaller, design simpler, implementation more portable and provides a way to implement storage agnostic smart contract design on Move powered platforms.
+Move module following the **Accountless Design** pattern doesn't handle storage (`move_to()` / `move_from()`) directly, instead the storage must be handled outside the module in transaction scripts. This makes the module code footprint smaller, design simpler, implementation more portable and provides a way to implement storage agnostic smart contract design on some Move powered platforms.
 
 ## Examples
