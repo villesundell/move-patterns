@@ -161,17 +161,17 @@
 <p>In the <strong>Multiple Configurations</strong> approach singletons (especially for configuration data) are provided to the module as arguments instead of storing them to any specific location. </p>
 <p>By incorporating this design into your modules, you would automatically add a layer of configurability by giving users or admins (if any) a way to create configurations which others could use. This would be similar to Uniswap which lets anyone create markets others could participate in.</p>
 <h2 id="examples"><a class="header" href="#examples">Examples</a></h2>
-<p>Let's say you have an auction smart contract X. and an admin has created a configuration to account A. Then B could issue a transaction script to bid on C's resource like this:</p>
-<pre><code>X.place_bid(A, C, 1234);
+<p>Let's say you have an auction smart contract X and an admin has created a configuration to account A. Then B could issue a transaction script to bid on C's resource like this:</p>
+<pre><code>X::place_bid(A, C, 1234);
 </code></pre>
-<p>By accepting parameters (such as C and the amount 1234), a transaction script could trivially hide the selection of the configuration. This depends, how flexible the final script implementation is in terms of arguments to main(), but the transaction script could look like this (quick mock-up):</p>
+<p>By accepting parameters (such as C and the amount 1234), a transaction script could trivially hide the selection of the configuration. This depends, how flexible the final script implementation is in terms of arguments to <code>main()</code>, but the transaction script could look like this (quick mock-up):</p>
 <pre><code>script {
     use 0xFF::X;
     
     const CONF: address = 0xCOFFEE;
 
     fun main(a: address, amount: XUS) {
-        X.place_bid(CONF, a, amount);
+        X::place_bid(CONF, a, amount);
     }
 }
 </code></pre>

@@ -151,13 +151,13 @@
 <p>While there have been other resource based programming languages in the past (such as <a href="http://www.cs.cmu.edu/%7Ealdrich/plaid/">Plaid</a>), for a long time resource based programming has been a niche, lacking applications where resource based approach would excel. However, <a href="https://en.wikipedia.org/wiki/Smart_contract">smart contracts</a> and <a href="https://en.wikipedia.org/wiki/Blockchain">blockchains</a> introduced software development challenges that can be answered with resource based programming.</p>
 <p>The <a href="https://github.com/move-language/move/">Move language</a> and its Move Virtual Machine were designed originally by Facebook to power their <a href="https://en.wikipedia.org/wiki/Diem_(digital_currency)">Diem</a> blockchain platform providing an intuitive environment and ecosystem for resource oriented applications. Fortunately Move was adopted by multiple blockchain projects as their smart contract execution environment before Diem was discontinued, so Move continued living separately as an independent project.</p>
 <p>Today Move and its virtual machine are powering <a href="https://github.com/MystenLabs/awesome-move#move-powered-blockchains">multiple blockchains</a>, most of which are still in the early development phase.</p>
-<p>Because Move is currently the most used resource based programming language (especially for blockchains), code examples are written in Move. However it is likely that some of these patterns can be implemented also in some other resource based language and ecosystem.</p>
+<p>Because Move is currently the most widely developed resource based programming language for blockchains, code examples are written in Move. However it is likely that some of these patterns can be implemented also in some other resource based language and ecosystem.</p>
 <h2 id="what-this-book-is"><a class="header" href="#what-this-book-is">What this book is</a></h2>
-<p>This book is for discussing software design paradigms and best practices for resource based languages, especially Move.</p>
+<p>This book is for discussing software design paradigms and best practices for resource based languages, especially Move and its flavors.</p>
 <h2 id="what-this-book-is-not"><a class="header" href="#what-this-book-is-not">What this book is not</a></h2>
 <p>This book is not a guide to Move or any other resource based language. For books on Move itself, see <a href="https://github.com/MystenLabs/awesome-move#books">this list</a>. Also see <a href="https://github.com/MystenLabs/awesome-move">awesome-move</a> for a curated list of code and content from the Move programming language community.</p>
 <h2 id="technical-disclaimer"><a class="header" href="#technical-disclaimer">Technical disclaimer</a></h2>
-<p>Due to excessive hyperlink usage, this book is not optimized for printing as-is, at least for now. However, the book can be viewed in any digital format supporting hyperlinks, including PDF.</p>
+<p>This book is designed to be viewed digitally with hyperlink support (such as PDF or web format). For now the <a href="https://en.wikipedia.org/wiki/Software_design_pattern#Documentation">full software pattern format</a> is not followed, instead the patterns are simply defined by a short summary and examples.</p>
 <h2 id="license"><a class="header" href="#license">License</a></h2>
 <p><a href="https://creativecommons.org/licenses/by/4.0/" title="Creative Commons Attribution 4.0 International License"><img src="https://mirrors.creativecommons.org/presskit/buttons/88x31/svg/by.svg" alt="CC BY 4.0 license button" title="CC BY 4.0 license button" /></a></p>
 <p>Move Patterns: Design Patterns for Resource Based Programming © 2022 by <a href="https://github.com/villesundell">Ville Sundell</a> is licensed under CC BY 4.0. To view a copy of this license, visit <a href="http://creativecommons.org/licenses/by/4.0/">http://creativecommons.org/licenses/by/4.0/</a>.</p>
@@ -170,7 +170,7 @@
 <tr><td><strong>Known to work on</strong></td><td>Move</td></tr>
 </tbody></table>
 <h2 id="summary"><a class="header" href="#summary">Summary</a></h2>
-<p><strong>Nestable Resources</strong> provides a resource native approach to code reuse by building a nested structure of resources where each resource can be detached for use if the conditions are satisfied. For example, tokens can be placed to a time locked resource, which in turn can be placed to a resource which can be used only by a certain user, effectively creating a time locked NFT. For cleaner design it is recommended that the interfaces for wrapping and unwrapping match across modules.</p>
+<p><strong>Nestable Resources</strong> pattern provides a resource native approach to code reuse by building a nested structure of resources where each resource can be detached for use if the conditions are satisfied. For example, tokens can be placed into a time locked resource, which in turn can be placed into a resource which can be used only by a certain user, effectively creating a timelocked non-fungible token. For cleaner design and easier integration it is recommended that the nestable resources share a common interface for wrapping and unwrapping.</p>
 <h2 id="examples"><a class="header" href="#examples">Examples</a></h2>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="multiple-configurations"><a class="header" href="#multiple-configurations">Multiple Configurations</a></h1>
 <table><thead><tr><th></th><th></th></tr></thead><tbody>
@@ -184,17 +184,17 @@
 <p>In the <strong>Multiple Configurations</strong> approach singletons (especially for configuration data) are provided to the module as arguments instead of storing them to any specific location. </p>
 <p>By incorporating this design into your modules, you would automatically add a layer of configurability by giving users or admins (if any) a way to create configurations which others could use. This would be similar to Uniswap which lets anyone create markets others could participate in.</p>
 <h2 id="examples-1"><a class="header" href="#examples-1">Examples</a></h2>
-<p>Let's say you have an auction smart contract X. and an admin has created a configuration to account A. Then B could issue a transaction script to bid on C's resource like this:</p>
-<pre><code>X.place_bid(A, C, 1234);
+<p>Let's say you have an auction smart contract X and an admin has created a configuration to account A. Then B could issue a transaction script to bid on C's resource like this:</p>
+<pre><code>X::place_bid(A, C, 1234);
 </code></pre>
-<p>By accepting parameters (such as C and the amount 1234), a transaction script could trivially hide the selection of the configuration. This depends, how flexible the final script implementation is in terms of arguments to main(), but the transaction script could look like this (quick mock-up):</p>
+<p>By accepting parameters (such as C and the amount 1234), a transaction script could trivially hide the selection of the configuration. This depends, how flexible the final script implementation is in terms of arguments to <code>main()</code>, but the transaction script could look like this (quick mock-up):</p>
 <pre><code>script {
     use 0xFF::X;
     
     const CONF: address = 0xCOFFEE;
 
     fun main(a: address, amount: XUS) {
-        X.place_bid(CONF, a, amount);
+        X::place_bid(CONF, a, amount);
     }
 }
 </code></pre>
@@ -207,7 +207,7 @@
 <tr><td><strong>Known to work on</strong></td><td>Move</td></tr>
 </tbody></table>
 <h2 id="summary-2"><a class="header" href="#summary-2">Summary</a></h2>
-<p>Move module following the <strong>Accountless Design</strong> pattern doesn't handle storage (<code>move_to()</code> / <code>move_from()</code>) directly, instead the storage must be handled outside the module in transaction scripts. This makes the module code footprint smaller, design simpler, implementation more portable and provides a way to implement storage agnostic smart contract design on Move powered platforms.</p>
+<p>Move module following the <strong>Accountless Design</strong> pattern doesn't handle storage (<code>move_to()</code> / <code>move_from()</code>) directly, instead the storage must be handled outside the module in transaction scripts. This makes the module code footprint smaller, design simpler, implementation more portable and provides a way to implement storage agnostic smart contract design on some Move powered platforms.</p>
 <h2 id="examples-2"><a class="header" href="#examples-2">Examples</a></h2>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="script-based-design"><a class="header" href="#script-based-design">Script Based Design</a></h1>
 <table><thead><tr><th></th><th></th></tr></thead><tbody>
