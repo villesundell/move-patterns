@@ -82,7 +82,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded affix "><a href="index.html">Introduction</a></li><li class="chapter-item expanded affix "><li class="part-title">Design Patterns</li><li class="chapter-item expanded "><a href="nestable_resources.html"><strong aria-hidden="true">1.</strong> Nestable Resources</a></li><li class="chapter-item expanded "><a href="multiple_configurations.html" class="active"><strong aria-hidden="true">2.</strong> Multiple Configurations</a></li><li class="chapter-item expanded "><a href="accountless_design.html"><strong aria-hidden="true">3.</strong> Accountless Design</a></li><li class="chapter-item expanded "><a href="script_based_design.html"><strong aria-hidden="true">4.</strong> Script Based Design</a></li><li class="chapter-item expanded "><a href="hot_potato.html"><strong aria-hidden="true">5.</strong> Hot Potato</a></li></ol>            </div>
+                <ol class="chapter"><li class="chapter-item expanded affix "><a href="index.html">Introduction</a></li><li class="chapter-item expanded affix "><li class="part-title">Design Patterns</li><li class="chapter-item expanded "><a href="capability.html"><strong aria-hidden="true">1.</strong> Capability</a></li><li class="chapter-item expanded "><a href="multiple_configurations.html" class="active"><strong aria-hidden="true">2.</strong> Multiple Configurations</a></li><li class="chapter-item expanded "><a href="nestable_resources.html"><strong aria-hidden="true">3.</strong> Nestable Resources</a></li><li class="chapter-item expanded "><a href="witness.html"><strong aria-hidden="true">4.</strong> Witness</a></li><li class="chapter-item expanded "><a href="accountless_design.html"><strong aria-hidden="true">5.</strong> Accountless Design</a></li><li class="chapter-item expanded "><a href="hot_potato.html"><strong aria-hidden="true">6.</strong> Hot Potato</a></li><li class="chapter-item expanded "><a href="script_based_design.html"><strong aria-hidden="true">7.</strong> Script Based Design</a></li><li class="chapter-item expanded "><a href="transferable_witness.html"><strong aria-hidden="true">8.</strong> Transferable Witness</a></li></ol>            </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
 
@@ -162,12 +162,12 @@
 <p>By incorporating this design into your modules, you would automatically add a layer of configurability by giving users or admins (if any) a way to create configurations which others could use. This would be similar to Uniswap which lets anyone create markets others could participate in.</p>
 <h2 id="examples"><a class="header" href="#examples">Examples</a></h2>
 <p>Let's say you have an auction smart contract X and an admin has created a configuration to account A. Then B could issue a transaction script to bid on C's resource like this:</p>
-<pre><code>X::place_bid(A, C, 1234);
+<pre><code class="language-move">X::place_bid(A, C, 1234);
 </code></pre>
 <p>By accepting parameters (such as C and the amount 1234), a transaction script could trivially hide the selection of the configuration. This depends, how flexible the final script implementation is in terms of arguments to <code>main()</code>, but the transaction script could look like this (quick mock-up):</p>
-<pre><code>script {
+<pre><code class="language-move">script {
     use 0xFF::X;
-    
+
     const CONF: address = 0xCOFFEE;
 
     fun main(a: address, amount: XUS) {
@@ -180,11 +180,11 @@
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                                                    <a rel="prev" href="nestable_resources.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                                    <a rel="prev" href="capability.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
                         
-                                                    <a rel="next" href="accountless_design.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                                    <a rel="next" href="nestable_resources.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
                         
@@ -194,11 +194,11 @@
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                                    <a rel="prev" href="nestable_resources.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                    <a rel="prev" href="capability.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
                 
-                                    <a rel="next" href="accountless_design.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                    <a rel="next" href="nestable_resources.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
                             </nav>

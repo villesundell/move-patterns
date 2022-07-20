@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Script Based Design - Move Patterns: Design Patterns for Resource Based Programming</title>
+        <title>Transferable Witness - Move Patterns: Design Patterns for Resource Based Programming</title>
                 
 
         <!-- Custom HTML head -->
@@ -82,7 +82,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded affix "><a href="index.html">Introduction</a></li><li class="chapter-item expanded affix "><li class="part-title">Design Patterns</li><li class="chapter-item expanded "><a href="capability.html"><strong aria-hidden="true">1.</strong> Capability</a></li><li class="chapter-item expanded "><a href="multiple_configurations.html"><strong aria-hidden="true">2.</strong> Multiple Configurations</a></li><li class="chapter-item expanded "><a href="nestable_resources.html"><strong aria-hidden="true">3.</strong> Nestable Resources</a></li><li class="chapter-item expanded "><a href="witness.html"><strong aria-hidden="true">4.</strong> Witness</a></li><li class="chapter-item expanded "><a href="accountless_design.html"><strong aria-hidden="true">5.</strong> Accountless Design</a></li><li class="chapter-item expanded "><a href="hot_potato.html"><strong aria-hidden="true">6.</strong> Hot Potato</a></li><li class="chapter-item expanded "><a href="script_based_design.html" class="active"><strong aria-hidden="true">7.</strong> Script Based Design</a></li><li class="chapter-item expanded "><a href="transferable_witness.html"><strong aria-hidden="true">8.</strong> Transferable Witness</a></li></ol>            </div>
+                <ol class="chapter"><li class="chapter-item expanded affix "><a href="index.html">Introduction</a></li><li class="chapter-item expanded affix "><li class="part-title">Design Patterns</li><li class="chapter-item expanded "><a href="capability.html"><strong aria-hidden="true">1.</strong> Capability</a></li><li class="chapter-item expanded "><a href="multiple_configurations.html"><strong aria-hidden="true">2.</strong> Multiple Configurations</a></li><li class="chapter-item expanded "><a href="nestable_resources.html"><strong aria-hidden="true">3.</strong> Nestable Resources</a></li><li class="chapter-item expanded "><a href="witness.html"><strong aria-hidden="true">4.</strong> Witness</a></li><li class="chapter-item expanded "><a href="accountless_design.html"><strong aria-hidden="true">5.</strong> Accountless Design</a></li><li class="chapter-item expanded "><a href="hot_potato.html"><strong aria-hidden="true">6.</strong> Hot Potato</a></li><li class="chapter-item expanded "><a href="script_based_design.html"><strong aria-hidden="true">7.</strong> Script Based Design</a></li><li class="chapter-item expanded "><a href="transferable_witness.html" class="active"><strong aria-hidden="true">8.</strong> Transferable Witness</a></li></ol>            </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
 
@@ -120,7 +120,7 @@
                                                                         <a href="https://github.com/villesundell/move-patterns" title="Git repository" aria-label="Git repository">
                             <i id="git-repository-button" class="fa fa-github"></i>
                         </a>
-                                                                        <a href="https://github.com/villesundell/move-patterns/edit/main/src/script_based_design.md" title="Suggest an edit" aria-label="Suggest an edit">
+                                                                        <a href="https://github.com/villesundell/move-patterns/edit/main/src/transferable_witness.md" title="Suggest an edit" aria-label="Suggest an edit">
                             <i id="git-edit-button" class="fa fa-edit"></i>
                         </a>
                         
@@ -149,29 +149,61 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="script-based-design"><a class="header" href="#script-based-design">Script Based Design</a></h1>
+                        <h1 id="transferable-witness"><a class="header" href="#transferable-witness">Transferable Witness</a></h1>
 <table><thead><tr><th></th><th></th></tr></thead><tbody>
-<tr><td><strong>Name</strong></td><td>Script Based Design</td></tr>
-<tr><td><strong>Origin</strong></td><td><a href="https://github.com/villesundell">Ville Sundell</a></td></tr>
-<tr><td><strong>Example</strong></td><td>Diem Forum post lost, April 18 2022</td></tr>
-<tr><td><strong>Depends on</strong></td><td><a href="./accountless_design.html">Accountless Design</a></td></tr>
+<tr><td><strong>Name</strong></td><td>Transferable Witness</td></tr>
+<tr><td><strong>Origin</strong></td><td><a href="https://examples.sui.io/patterns/transferable-witness.html">Sui Move by Example</a> / <a href="https://github.com/damirka">Damir Shamanaev</a></td></tr>
+<tr><td><strong>Example</strong></td><td><a href="https://examples.sui.io/patterns/transferable-witness.html">Sui Move by Example</a> / <a href="https://github.com/damirka">Damir Shamanaev</a></td></tr>
+<tr><td><strong>Depends on</strong></td><td><a href="./capability.html">Capability</a>, <a href="./witness.html">Witness</a></td></tr>
 <tr><td><strong>Known to work on</strong></td><td>Move</td></tr>
 </tbody></table>
 <h2 id="summary"><a class="header" href="#summary">Summary</a></h2>
-<p><strong>Script Based Design</strong> combines <a href="./accountless_design.html">Accountless Design</a> with <em>Move Transaction Scripts</em> enabling a design where most of the business logic resides in transaction scripts, while keeping the most critical parts in modules. This way the transaction scripts can be developed and improved faster than a regular module would, while providing the same kind of guarantees as regular modules by keeping the most critical part (state transitions) in modules.</p>
+<p>A <strong>Transferable Witness</strong> is a semi-ephemeral storable <a href="./witness.html">witness</a> wrapped into a disposable <a href="./capability.html">capability</a>. </p>
 <h2 id="examples"><a class="header" href="#examples">Examples</a></h2>
+<pre><code class="language-move">/// This pattern is based on combination of two others: Capability and a Witness.
+/// Since Witness is something to be careful with, spawning it should be only
+/// allowed to authorized users (ideally only once). But some scenarios require
+/// type authorization by module X to be used in another module Y. Or, possibly,
+/// there's a case where authorization should be performed after some time.
+///
+/// For these, rather rare, scerarios a storable witness is a perfect solution.
+module examples::transferable_witness {
+    use sui::transfer;
+    use sui::id::{Self, VersionedID};
+    use sui::tx_context::{Self, TxContext};
+
+    /// Witness now has a `store` which allows us to store it inside a wrapper.
+    struct WITNESS has store, drop {}
+
+    /// Carries the witness type. Can only be used once to get a Witness.
+    struct WitnessCarrier has key { id: VersionedID, witness: WITNESS }
+
+    /// Send a `WitnessCarrier` to the module publisher.
+    fun init(ctx: &amp;mut TxContext) {
+        transfer::transfer(
+            WitnessCarrier { id: tx_context::new_id(ctx), witness: WITNESS {} },
+            tx_context::sender(ctx)
+        )
+    }
+
+    /// Unwrap a carrier and get the inner WITNESS type.
+    public fun get_witness(carrier: WitnessCarrier): WITNESS {
+        let WitnessCarrier { id, witness } = carrier;
+        id::delete(id);
+        witness
+    }
+}
+</code></pre>
+<p><em>Example for Sui Move is taken from the book <a href="https://examples.sui.io/patterns/transferable-witness.html">Sui Move by Example</a> by <a href="https://github.com/damirka">Damir Shamanaev</a>.</em></p>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                                                    <a rel="prev" href="hot_potato.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                                    <a rel="prev" href="script_based_design.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
                         
-                                                    <a rel="next" href="transferable_witness.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
-                                <i class="fa fa-angle-right"></i>
-                            </a>
                         
                         <div style="clear: both"></div>
                     </nav>
@@ -179,13 +211,10 @@
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                                    <a rel="prev" href="hot_potato.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                    <a rel="prev" href="script_based_design.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
                 
-                                    <a rel="next" href="transferable_witness.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
-                        <i class="fa fa-angle-right"></i>
-                    </a>
                             </nav>
 
         </div>

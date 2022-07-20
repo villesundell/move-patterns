@@ -83,7 +83,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded affix "><a href="index.html">Introduction</a></li><li class="chapter-item expanded affix "><li class="part-title">Design Patterns</li><li class="chapter-item expanded "><a href="nestable_resources.html"><strong aria-hidden="true">1.</strong> Nestable Resources</a></li><li class="chapter-item expanded "><a href="multiple_configurations.html"><strong aria-hidden="true">2.</strong> Multiple Configurations</a></li><li class="chapter-item expanded "><a href="accountless_design.html"><strong aria-hidden="true">3.</strong> Accountless Design</a></li><li class="chapter-item expanded "><a href="script_based_design.html"><strong aria-hidden="true">4.</strong> Script Based Design</a></li><li class="chapter-item expanded "><a href="hot_potato.html"><strong aria-hidden="true">5.</strong> Hot Potato</a></li></ol>            </div>
+                <ol class="chapter"><li class="chapter-item expanded affix "><a href="index.html">Introduction</a></li><li class="chapter-item expanded affix "><li class="part-title">Design Patterns</li><li class="chapter-item expanded "><a href="capability.html"><strong aria-hidden="true">1.</strong> Capability</a></li><li class="chapter-item expanded "><a href="multiple_configurations.html"><strong aria-hidden="true">2.</strong> Multiple Configurations</a></li><li class="chapter-item expanded "><a href="nestable_resources.html"><strong aria-hidden="true">3.</strong> Nestable Resources</a></li><li class="chapter-item expanded "><a href="witness.html"><strong aria-hidden="true">4.</strong> Witness</a></li><li class="chapter-item expanded "><a href="accountless_design.html"><strong aria-hidden="true">5.</strong> Accountless Design</a></li><li class="chapter-item expanded "><a href="hot_potato.html"><strong aria-hidden="true">6.</strong> Hot Potato</a></li><li class="chapter-item expanded "><a href="script_based_design.html"><strong aria-hidden="true">7.</strong> Script Based Design</a></li><li class="chapter-item expanded "><a href="transferable_witness.html"><strong aria-hidden="true">8.</strong> Transferable Witness</a></li></ol>            </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
 
@@ -161,17 +161,51 @@
 <h2 id="license"><a class="header" href="#license">License</a></h2>
 <p><a href="https://creativecommons.org/licenses/by/4.0/" title="Creative Commons Attribution 4.0 International License"><img src="https://mirrors.creativecommons.org/presskit/buttons/88x31/svg/by.svg" alt="CC BY 4.0 license button" title="CC BY 4.0 license button" /></a></p>
 <p>Move Patterns: Design Patterns for Resource Based Programming © 2022 by <a href="https://github.com/villesundell">Ville Sundell</a> is licensed under CC BY 4.0. To view a copy of this license, visit <a href="http://creativecommons.org/licenses/by/4.0/">http://creativecommons.org/licenses/by/4.0/</a>.</p>
-<div style="break-before: page; page-break-before: always;"></div><h1 id="nestable-resources"><a class="header" href="#nestable-resources">Nestable Resources</a></h1>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="capability"><a class="header" href="#capability">Capability</a></h1>
 <table><thead><tr><th></th><th></th></tr></thead><tbody>
-<tr><td><strong>Name</strong></td><td>Nestable Resources</td></tr>
-<tr><td><strong>Origin</strong></td><td><a href="https://github.com/villesundell">Ville Sundell</a></td></tr>
-<tr><td><strong>Example</strong></td><td><a href="https://github.com/taoheorg/taohe">TaoHe project</a></td></tr>
+<tr><td><strong>Name</strong></td><td>Capability</td></tr>
+<tr><td><strong>Origin</strong></td><td><a href="https://github.com/move-language/move/blob/5e034dde19a5320d7e2bdc9da25114e816b4454d/language/stdlib/modules/libra_coin.mvir#L8">Libra Project</a> / Unknown Author</td></tr>
+<tr><td><strong>Example</strong></td><td><a href="https://examples.sui.io/patterns/capability.html">Sui Move by Example</a> / <a href="https://github.com/damirka">Damir Shamanaev</a></td></tr>
 <tr><td><strong>Depends on</strong></td><td>None</td></tr>
 <tr><td><strong>Known to work on</strong></td><td>Move</td></tr>
 </tbody></table>
 <h2 id="summary"><a class="header" href="#summary">Summary</a></h2>
-<p><strong>Nestable Resources</strong> pattern provides a resource native approach to code reuse by building a nested structure of resources where each resource can be detached for use if the conditions are satisfied. For example, tokens can be placed into a time locked resource, which in turn can be placed into a resource which can be used only by a certain user, effectively creating a timelocked non-fungible token. For cleaner design and easier integration it is recommended that the nestable resources share a common interface for wrapping and unwrapping.</p>
+<p>A <strong>Capability</strong> is a resource proving that the owner of the resource is permitted to execute a certain action. This is the oldest known Move design pattern dating back to the Libra project and its token smart contract, where capabilities were used to authorize minting of coins.</p>
 <h2 id="examples"><a class="header" href="#examples">Examples</a></h2>
+<pre><code class="language-move">module examples::item {
+    use sui::transfer;
+    use sui::id::VersionedID;
+    use sui::utf8::{Self, String};
+    use sui::tx_context::{Self, TxContext};
+
+    /// Type that marks Capability to create new `Item`s.
+    struct AdminCap has key { id: VersionedID }
+
+    /// Custom NFT-like type.
+    struct Item has key, store { id: VersionedID, name: String }
+
+    /// Module initializer is called once on module publish.
+    /// Here we create only one instance of `AdminCap` and send it to the publisher.
+    fun item(ctx: &amp;mut TxContext) {
+        transfer::transfer(AdminCap {
+            id: tx_context::new_id(ctx)
+        }, tx_context::sender(ctx))
+    }
+
+    /// The entry function can not be called if `AdminCap` is not passed as
+    /// the first argument. Hence only owner of the `AdminCap` can perform
+    /// this action.
+    public entry fun create_and_send(
+        _: &amp;AdminCap, name: vector&lt;u8&gt;, to: address, ctx: &amp;mut TxContext
+    ) {
+        transfer::transfer(Item {
+            id: tx_context::new_id(ctx),
+            name: utf8::string_unsafe(name)
+        }, to)
+    }
+}
+</code></pre>
+<p><em>Example for Sui Move is taken from the book <a href="https://examples.sui.io/patterns/capability.html">Sui Move by Example</a> by <a href="https://github.com/damirka">Damir Shamanaev</a>.</em></p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="multiple-configurations"><a class="header" href="#multiple-configurations">Multiple Configurations</a></h1>
 <table><thead><tr><th></th><th></th></tr></thead><tbody>
 <tr><td><strong>Name</strong></td><td>Multiple Configurations</td></tr>
@@ -185,12 +219,12 @@
 <p>By incorporating this design into your modules, you would automatically add a layer of configurability by giving users or admins (if any) a way to create configurations which others could use. This would be similar to Uniswap which lets anyone create markets others could participate in.</p>
 <h2 id="examples-1"><a class="header" href="#examples-1">Examples</a></h2>
 <p>Let's say you have an auction smart contract X and an admin has created a configuration to account A. Then B could issue a transaction script to bid on C's resource like this:</p>
-<pre><code>X::place_bid(A, C, 1234);
+<pre><code class="language-move">X::place_bid(A, C, 1234);
 </code></pre>
 <p>By accepting parameters (such as C and the amount 1234), a transaction script could trivially hide the selection of the configuration. This depends, how flexible the final script implementation is in terms of arguments to <code>main()</code>, but the transaction script could look like this (quick mock-up):</p>
-<pre><code>script {
+<pre><code class="language-move">script {
     use 0xFF::X;
-    
+
     const CONF: address = 0xCOFFEE;
 
     fun main(a: address, amount: XUS) {
@@ -198,6 +232,72 @@
     }
 }
 </code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="nestable-resources"><a class="header" href="#nestable-resources">Nestable Resources</a></h1>
+<table><thead><tr><th></th><th></th></tr></thead><tbody>
+<tr><td><strong>Name</strong></td><td>Nestable Resources</td></tr>
+<tr><td><strong>Origin</strong></td><td><a href="https://github.com/villesundell">Ville Sundell</a></td></tr>
+<tr><td><strong>Example</strong></td><td><a href="https://github.com/taoheorg/taohe">TaoHe project</a></td></tr>
+<tr><td><strong>Depends on</strong></td><td>None</td></tr>
+<tr><td><strong>Known to work on</strong></td><td>Move</td></tr>
+</tbody></table>
+<h2 id="summary-2"><a class="header" href="#summary-2">Summary</a></h2>
+<p><strong>Nestable Resources</strong> pattern provides a resource native approach to code reuse by building a nested structure of resources where each resource can be detached for use if the conditions are satisfied. For example, tokens can be placed into a time locked resource, which in turn can be placed into a resource which can be used only by a certain user, effectively creating a timelocked non-fungible token. For cleaner design and easier integration it is recommended that the nestable resources share a common interface for wrapping and unwrapping.</p>
+<h2 id="examples-2"><a class="header" href="#examples-2">Examples</a></h2>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="witness"><a class="header" href="#witness">Witness</a></h1>
+<table><thead><tr><th></th><th></th></tr></thead><tbody>
+<tr><td><strong>Name</strong></td><td>Witness</td></tr>
+<tr><td><strong>Origin</strong></td><td><a href="https://github.com/MystenLabs/sui/blob/c1ed7cc451119432d32d8eacf471f314e0ce5275/fastx_programmability/sources/Coin.move#L85">FastX</a> / <a href="https://github.com/sblackshear">Sam Blackshear</a></td></tr>
+<tr><td><strong>Example</strong></td><td><a href="https://examples.sui.io/patterns/witness.html">Sui Move by Example</a> / <a href="https://github.com/damirka">Damir Shamanaev</a></td></tr>
+<tr><td><strong>Depends on</strong></td><td>None</td></tr>
+<tr><td><strong>Known to work on</strong></td><td>Move</td></tr>
+</tbody></table>
+<h2 id="summary-3"><a class="header" href="#summary-3">Summary</a></h2>
+<p>A <strong>Witness</strong> is an ephemeral resource designed to prove only once that the a resource in question can be initiated only once after the witness has been created. The resource is dropped after use, ensuring that the same resource cannot be reused to initialize any other struct.</p>
+<h2 id="examples-3"><a class="header" href="#examples-3">Examples</a></h2>
+<pre><code class="language-move">/// Module that defines a generic type `Guardian&lt;T&gt;` which can only be
+/// instantiated with a witness.
+module examples::guardian {
+    use sui::id::VersionedID;
+    use sui::tx_context::{Self, TxContext};
+
+    /// Phantom parameter T can only be initialized in the `create_guardian`
+    /// function. But the types passed here must have `drop`.
+    struct Guardian&lt;phantom T: drop&gt; has key, store {
+        id: VersionedID
+    }
+
+    /// The first argument of this function is an actual instance of the
+    /// type T with `drop` ability. It is dropped as soon as received.
+    public fun create_guardian&lt;T: drop&gt;(
+        _witness: T, ctx: &amp;mut TxContext
+    ): Guardian&lt;T&gt; {
+        Guardian { id: tx_context::new_id(ctx) }
+    }
+}
+
+/// Custom module that makes use of the `guardian`.
+module examples::peace {
+    use sui::transfer;
+    use sui::tx_context::{Self, TxContext};
+
+    // Use the `guardian` as a dependency.
+    use 0x0::guardian;
+
+    /// This type is intended to be used only once.
+    struct PEACE has drop {}
+
+    /// Module initializer is the best way to ensure that the
+    /// code is called only once. With `Witness` pattern it is
+    /// often the best practice.
+    fun init(ctx: &amp;mut TxContext) {
+        transfer::transfer(
+            guardian::create_guardian(PEACE {}, ctx),
+            tx_context::sender(ctx)
+        )
+    }
+}
+</code></pre>
+<p><em>Example for Sui Move is taken from the book <a href="https://examples.sui.io/patterns/witness.html">Sui Move by Example</a> by <a href="https://github.com/damirka">Damir Shamanaev</a>.</em></p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="accountless-design"><a class="header" href="#accountless-design">Accountless Design</a></h1>
 <table><thead><tr><th></th><th></th></tr></thead><tbody>
 <tr><td><strong>Name</strong></td><td>Accountless Design</td></tr>
@@ -206,31 +306,77 @@
 <tr><td><strong>Depends on</strong></td><td>None</td></tr>
 <tr><td><strong>Known to work on</strong></td><td>Move</td></tr>
 </tbody></table>
-<h2 id="summary-2"><a class="header" href="#summary-2">Summary</a></h2>
+<h2 id="summary-4"><a class="header" href="#summary-4">Summary</a></h2>
 <p>Move module following the <strong>Accountless Design</strong> pattern doesn't handle storage (<code>move_to()</code> / <code>move_from()</code>) directly, instead the storage must be handled outside the module in transaction scripts. This makes the module code footprint smaller, design simpler, implementation more portable and provides a way to implement storage agnostic smart contract design on some Move powered platforms.</p>
-<h2 id="examples-2"><a class="header" href="#examples-2">Examples</a></h2>
-<div style="break-before: page; page-break-before: always;"></div><h1 id="script-based-design"><a class="header" href="#script-based-design">Script Based Design</a></h1>
-<table><thead><tr><th></th><th></th></tr></thead><tbody>
-<tr><td><strong>Name</strong></td><td>Script Based Design</td></tr>
-<tr><td><strong>Origin</strong></td><td><a href="https://github.com/villesundell">Ville Sundell</a></td></tr>
-<tr><td><strong>Example</strong></td><td>This file</td></tr>
-<tr><td><strong>Depends on</strong></td><td><a href="./accountless_design.html">Accountless Design</a></td></tr>
-<tr><td><strong>Known to work on</strong></td><td>Move</td></tr>
-</tbody></table>
-<h2 id="summary-3"><a class="header" href="#summary-3">Summary</a></h2>
-<p><strong>Script Based Design</strong> combines <a href="./accountless_design.html">Accountless Design</a> with <em>Move Transaction Scripts</em> enabling a design where most of the business logic resides in transaction scripts, while keeping the most critical parts in modules. This way the transaction scripts can be developed and improved faster than a regular module would, while providing the same kind of guarantees as regular modules by keeping the most critical state transitions in modules.</p>
-<h2 id="examples-3"><a class="header" href="#examples-3">Examples</a></h2>
+<h2 id="examples-4"><a class="header" href="#examples-4">Examples</a></h2>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="hot-potato"><a class="header" href="#hot-potato">Hot Potato</a></h1>
 <table><thead><tr><th></th><th></th></tr></thead><tbody>
 <tr><td><strong>Name</strong></td><td>Hot Potato</td></tr>
-<tr><td><strong>Origin</strong></td><td><a href="https://github.com/tnowacki">Todd Nowacki</a> / <a href="https://github.com/MystenLabs/">Mysten Labs</a></td></tr>
+<tr><td><strong>Origin</strong></td><td><a href="https://github.com/MystenLabs/sui/blob/20e68787b3ace2b408ba0c1d8d9117fc5206cb05/sui_programmability/examples/defi/sources/FlashLender.move#L19">Sui Project</a> / <a href="https://github.com/tnowacki">Todd Nowacki</a></td></tr>
 <tr><td><strong>Example</strong></td><td><a href="https://github.com/MystenLabs/sui/blob/a6156aeaf332b9f257cf04063a9a751a7a431360/sui_programmability/examples/defi/sources/flash_lender.move">FlashLender.move</a></td></tr>
 <tr><td><strong>Depends on</strong></td><td>None</td></tr>
 <tr><td><strong>Known to work on</strong></td><td>Move</td></tr>
 </tbody></table>
-<h2 id="summary-4"><a class="header" href="#summary-4">Summary</a></h2>
+<h2 id="summary-5"><a class="header" href="#summary-5">Summary</a></h2>
 <p>A <strong>Hot Potato</strong> is a struct without <code>key</code>, <code>store</code> and <code>drop</code> <a href="https://move-language.github.io/move/abilities.html">abilities</a> forcing the struct to be used within the transaction it was created in. This is desired in applications like <a href="https://github.com/MystenLabs/sui/blob/a6156aeaf332b9f257cf04063a9a751a7a431360/sui_programmability/examples/defi/sources/flash_lender.move">flash loans</a> where the loans must be initiated and repaid during the same transaction.</p>
-<h2 id="examples-4"><a class="header" href="#examples-4">Examples</a></h2>
+<h2 id="examples-5"><a class="header" href="#examples-5">Examples</a></h2>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="script-based-design"><a class="header" href="#script-based-design">Script Based Design</a></h1>
+<table><thead><tr><th></th><th></th></tr></thead><tbody>
+<tr><td><strong>Name</strong></td><td>Script Based Design</td></tr>
+<tr><td><strong>Origin</strong></td><td><a href="https://github.com/villesundell">Ville Sundell</a></td></tr>
+<tr><td><strong>Example</strong></td><td>Diem Forum post lost, April 18 2022</td></tr>
+<tr><td><strong>Depends on</strong></td><td><a href="./accountless_design.html">Accountless Design</a></td></tr>
+<tr><td><strong>Known to work on</strong></td><td>Move</td></tr>
+</tbody></table>
+<h2 id="summary-6"><a class="header" href="#summary-6">Summary</a></h2>
+<p><strong>Script Based Design</strong> combines <a href="./accountless_design.html">Accountless Design</a> with <em>Move Transaction Scripts</em> enabling a design where most of the business logic resides in transaction scripts, while keeping the most critical parts in modules. This way the transaction scripts can be developed and improved faster than a regular module would, while providing the same kind of guarantees as regular modules by keeping the most critical part (state transitions) in modules.</p>
+<h2 id="examples-6"><a class="header" href="#examples-6">Examples</a></h2>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="transferable-witness"><a class="header" href="#transferable-witness">Transferable Witness</a></h1>
+<table><thead><tr><th></th><th></th></tr></thead><tbody>
+<tr><td><strong>Name</strong></td><td>Transferable Witness</td></tr>
+<tr><td><strong>Origin</strong></td><td><a href="https://examples.sui.io/patterns/transferable-witness.html">Sui Move by Example</a> / <a href="https://github.com/damirka">Damir Shamanaev</a></td></tr>
+<tr><td><strong>Example</strong></td><td><a href="https://examples.sui.io/patterns/transferable-witness.html">Sui Move by Example</a> / <a href="https://github.com/damirka">Damir Shamanaev</a></td></tr>
+<tr><td><strong>Depends on</strong></td><td><a href="./capability.html">Capability</a>, <a href="./witness.html">Witness</a></td></tr>
+<tr><td><strong>Known to work on</strong></td><td>Move</td></tr>
+</tbody></table>
+<h2 id="summary-7"><a class="header" href="#summary-7">Summary</a></h2>
+<p>A <strong>Transferable Witness</strong> is a semi-ephemeral storable <a href="./witness.html">witness</a> wrapped into a disposable <a href="./capability.html">capability</a>. </p>
+<h2 id="examples-7"><a class="header" href="#examples-7">Examples</a></h2>
+<pre><code class="language-move">/// This pattern is based on combination of two others: Capability and a Witness.
+/// Since Witness is something to be careful with, spawning it should be only
+/// allowed to authorized users (ideally only once). But some scenarios require
+/// type authorization by module X to be used in another module Y. Or, possibly,
+/// there's a case where authorization should be performed after some time.
+///
+/// For these, rather rare, scerarios a storable witness is a perfect solution.
+module examples::transferable_witness {
+    use sui::transfer;
+    use sui::id::{Self, VersionedID};
+    use sui::tx_context::{Self, TxContext};
+
+    /// Witness now has a `store` which allows us to store it inside a wrapper.
+    struct WITNESS has store, drop {}
+
+    /// Carries the witness type. Can only be used once to get a Witness.
+    struct WitnessCarrier has key { id: VersionedID, witness: WITNESS }
+
+    /// Send a `WitnessCarrier` to the module publisher.
+    fun init(ctx: &amp;mut TxContext) {
+        transfer::transfer(
+            WitnessCarrier { id: tx_context::new_id(ctx), witness: WITNESS {} },
+            tx_context::sender(ctx)
+        )
+    }
+
+    /// Unwrap a carrier and get the inner WITNESS type.
+    public fun get_witness(carrier: WitnessCarrier): WITNESS {
+        let WitnessCarrier { id, witness } = carrier;
+        id::delete(id);
+        witness
+    }
+}
+</code></pre>
+<p><em>Example for Sui Move is taken from the book <a href="https://examples.sui.io/patterns/transferable-witness.html">Sui Move by Example</a> by <a href="https://github.com/damirka">Damir Shamanaev</a>.</em></p>
 
                     </main>
 
