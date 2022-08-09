@@ -2,7 +2,7 @@
 
 While there have been other resource based programming languages in the past (such as [Plaid](http://www.cs.cmu.edu/~aldrich/plaid/)), for a long time resource based programming has been a niche, lacking applications where resource based approach would excel. However, [smart contracts](https://en.wikipedia.org/wiki/Smart_contract) and [blockchains](https://en.wikipedia.org/wiki/Blockchain) introduced software development challenges that can be answered with resource based programming.
 
-The [Move language](https://github.com/move-language/move/) and its Move Virtual Machine were designed originally by Facebook to power their [Diem](https://en.wikipedia.org/wiki/Diem_(digital_currency)) blockchain platform providing an intuitive environment and ecosystem for resource oriented applications. Fortunately Move was adopted by multiple blockchain projects as their smart contract execution environment before Diem was discontinued, so Move continued living separately as an independent project.
+The [Move language](https://github.com/move-language/move/) and its Move Virtual Machine were designed originally by Facebook to power their [Diem](https://en.wikipedia.org/wiki/Diem_(digital_currency)) blockchain platform providing an intuitive environment and ecosystem for resource oriented applications. Fortunately Move was adopted by multiple blockchain projects as their smart contract execution environment before Diem was discontinued, so Move continues living separately as an independent project.
 
 Today Move and its virtual machine are powering [multiple blockchains](https://github.com/MystenLabs/awesome-move#move-powered-blockchains), most of which are still in the early development phase.
 
