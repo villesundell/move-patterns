@@ -160,6 +160,66 @@
 <h2 id="summary"><a class="header" href="#summary">Summary</a></h2>
 <p><strong>Nestable Resources</strong> pattern provides a resource native approach to code reuse by building a nested structure of resources where each resource can be detached for use if the conditions are satisfied. For example, tokens can be placed into a time locked resource, which in turn can be placed into a resource which can be used only by a certain user, effectively creating a timelocked non-fungible token. For cleaner design and easier integration it is recommended that the nestable resources share a common interface for wrapping and unwrapping.</p>
 <h2 id="examples"><a class="header" href="#examples">Examples</a></h2>
+<pre><code class="language-move">/// A nested resource (tao) for implementing a simple ownership model: owner can extract
+/// the content.
+module 0x1::Ownable {
+    use Std::Signer;
+
+    /// Simple ownership tao: the `owner` can extract `content`.
+    struct Tao&lt;Content&gt; has key, store {
+        owner: address,
+        content: Content
+    }
+
+    /// Wrapping `content` into a tao the `owner` can only extract.
+    public fun wrap&lt;Content&gt;(owner: address, content: Content): Tao&lt;Content&gt; {
+        Tao&lt;Content&gt; { owner, content }
+    }
+
+    /// Immutable read-only reference to the owner address, and `content`.
+    public fun read&lt;Content&gt;(tao: &amp;Tao&lt;Content&gt;): (&amp;address, &amp;Content) {
+        let Tao&lt;Content&gt; { owner, content } = tao;
+
+        (owner, content)
+    }
+
+    /// If `account ` is the `owner`, extract `content`.
+    public fun unwrap&lt;Content&gt;(account: &amp;signer, tao: Tao&lt;Content&gt;): Content {
+        let Tao&lt;Content&gt; { owner, content } = tao;
+
+        assert!(owner == Signer::address_of(account), 123);
+
+        content
+    }
+}
+</code></pre>
+<pre><code class="language-move">/// A folder tao to store an arbitrary number of taos.
+module 0x1::Folder {
+    /// A simple tao struct containing a vector of resources.
+    struct Tao&lt;Content&gt; has key, store {
+        content: vector&lt;Content&gt;
+    }
+
+    /// Create a new tao, with the static set of resources inside it.
+    public fun wrap&lt;Content&gt;(content: vector&lt;Content&gt;): Tao&lt;Content&gt; {
+        Tao&lt;Content&gt; { content }
+    }
+
+    /// Immutable read-only reference to the vector containing resources.
+    public fun read&lt;Content&gt;(tao: &amp;Tao&lt;Content&gt;): &amp;vector&lt;Content&gt; {
+        let Tao&lt;Content&gt; { content } = tao;
+
+        content
+    }
+
+    /// Destroy the tao, and return the static set of resources inside it.
+    public fun unwrap&lt;Content&gt;(tao: Tao&lt;Content&gt;): vector&lt;Content&gt; {
+        let Tao&lt;Content&gt; { content } = tao;
+
+        content
+    }
+</code></pre>
+<p><em>A token can be placed inside <code>Ownable</code> and it can be placed inside <code>Folder</code>, or other way around, if so desired.</em></p>
 
                     </main>
 

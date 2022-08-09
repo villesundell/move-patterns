@@ -149,7 +149,7 @@
                     <main>
                         <h1 id="introduction"><a class="header" href="#introduction">Introduction</a></h1>
 <p>While there have been other resource based programming languages in the past (such as <a href="http://www.cs.cmu.edu/%7Ealdrich/plaid/">Plaid</a>), for a long time resource based programming has been a niche, lacking applications where resource based approach would excel. However, <a href="https://en.wikipedia.org/wiki/Smart_contract">smart contracts</a> and <a href="https://en.wikipedia.org/wiki/Blockchain">blockchains</a> introduced software development challenges that can be answered with resource based programming.</p>
-<p>The <a href="https://github.com/move-language/move/">Move language</a> and its Move Virtual Machine were designed originally by Facebook to power their <a href="https://en.wikipedia.org/wiki/Diem_(digital_currency)">Diem</a> blockchain platform providing an intuitive environment and ecosystem for resource oriented applications. Fortunately Move was adopted by multiple blockchain projects as their smart contract execution environment before Diem was discontinued, so Move continued living separately as an independent project.</p>
+<p>The <a href="https://github.com/move-language/move/">Move language</a> and its Move Virtual Machine were designed originally by Facebook to power their <a href="https://en.wikipedia.org/wiki/Diem_(digital_currency)">Diem</a> blockchain platform providing an intuitive environment and ecosystem for resource oriented applications. Fortunately Move was adopted by multiple blockchain projects as their smart contract execution environment before Diem was discontinued, so Move continues living separately as an independent project.</p>
 <p>Today Move and its virtual machine are powering <a href="https://github.com/MystenLabs/awesome-move#move-powered-blockchains">multiple blockchains</a>, most of which are still in the early development phase.</p>
 <p>Because Move is currently the most widely developed resource based programming language for blockchains, code examples are written in Move. However it is likely that some of these patterns can be implemented also in some other resource based language and ecosystem.</p>
 <h2 id="what-this-book-is"><a class="header" href="#what-this-book-is">What this book is</a></h2>
@@ -243,6 +243,66 @@
 <h2 id="summary-2"><a class="header" href="#summary-2">Summary</a></h2>
 <p><strong>Nestable Resources</strong> pattern provides a resource native approach to code reuse by building a nested structure of resources where each resource can be detached for use if the conditions are satisfied. For example, tokens can be placed into a time locked resource, which in turn can be placed into a resource which can be used only by a certain user, effectively creating a timelocked non-fungible token. For cleaner design and easier integration it is recommended that the nestable resources share a common interface for wrapping and unwrapping.</p>
 <h2 id="examples-2"><a class="header" href="#examples-2">Examples</a></h2>
+<pre><code class="language-move">/// A nested resource (tao) for implementing a simple ownership model: owner can extract
+/// the content.
+module 0x1::Ownable {
+    use Std::Signer;
+
+    /// Simple ownership tao: the `owner` can extract `content`.
+    struct Tao&lt;Content&gt; has key, store {
+        owner: address,
+        content: Content
+    }
+
+    /// Wrapping `content` into a tao the `owner` can only extract.
+    public fun wrap&lt;Content&gt;(owner: address, content: Content): Tao&lt;Content&gt; {
+        Tao&lt;Content&gt; { owner, content }
+    }
+
+    /// Immutable read-only reference to the owner address, and `content`.
+    public fun read&lt;Content&gt;(tao: &amp;Tao&lt;Content&gt;): (&amp;address, &amp;Content) {
+        let Tao&lt;Content&gt; { owner, content } = tao;
+
+        (owner, content)
+    }
+
+    /// If `account ` is the `owner`, extract `content`.
+    public fun unwrap&lt;Content&gt;(account: &amp;signer, tao: Tao&lt;Content&gt;): Content {
+        let Tao&lt;Content&gt; { owner, content } = tao;
+
+        assert!(owner == Signer::address_of(account), 123);
+
+        content
+    }
+}
+</code></pre>
+<pre><code class="language-move">/// A folder tao to store an arbitrary number of taos.
+module 0x1::Folder {
+    /// A simple tao struct containing a vector of resources.
+    struct Tao&lt;Content&gt; has key, store {
+        content: vector&lt;Content&gt;
+    }
+
+    /// Create a new tao, with the static set of resources inside it.
+    public fun wrap&lt;Content&gt;(content: vector&lt;Content&gt;): Tao&lt;Content&gt; {
+        Tao&lt;Content&gt; { content }
+    }
+
+    /// Immutable read-only reference to the vector containing resources.
+    public fun read&lt;Content&gt;(tao: &amp;Tao&lt;Content&gt;): &amp;vector&lt;Content&gt; {
+        let Tao&lt;Content&gt; { content } = tao;
+
+        content
+    }
+
+    /// Destroy the tao, and return the static set of resources inside it.
+    public fun unwrap&lt;Content&gt;(tao: Tao&lt;Content&gt;): vector&lt;Content&gt; {
+        let Tao&lt;Content&gt; { content } = tao;
+
+        content
+    }
+</code></pre>
+<p><em>A token can be placed inside <code>Ownable</code> and it can be placed inside <code>Folder</code>, or other way around, if so desired.</em></p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="witness"><a class="header" href="#witness">Witness</a></h1>
 <table><thead><tr><th></th><th></th></tr></thead><tbody>
 <tr><td><strong>Name</strong></td><td>Witness</td></tr>
@@ -309,6 +369,57 @@ module examples::peace {
 <h2 id="summary-4"><a class="header" href="#summary-4">Summary</a></h2>
 <p>Move module following the <strong>Accountless Design</strong> pattern doesn't handle storage (<code>move_to()</code> / <code>move_from()</code>) directly, instead the storage must be handled outside the module in transaction scripts. This makes the module code footprint smaller, design simpler, implementation more portable and provides a way to implement storage agnostic smart contract design on some Move powered platforms.</p>
 <h2 id="examples-4"><a class="header" href="#examples-4">Examples</a></h2>
+<pre><code class="language-move">module 0x1::Outbox {
+    use Std::Event;
+    use Std::Signer;
+    use Std::Vector;
+
+    struct Item&lt;Content: key + store&gt; has key, store {
+        from: address,
+        to: address,
+        content: Content
+    }
+
+    struct Outbox&lt;Content: key + store&gt; has key, store {
+        content: vector&lt;Item&lt;Content&gt;&gt;
+    }
+
+    struct Put&lt;phantom Content&gt; has key, drop, store {
+    }
+
+    struct EventHandle&lt;phantom Content: drop + store&gt; has key, store {
+        event_handle: Event::EventHandle&lt;Content&gt;
+    }
+
+    public fun create&lt;Content: key + store&gt;(account: &amp;signer) {
+        move_to&lt;Outbox&lt;Content&gt;&gt;(account, Outbox&lt;Content&gt; { content: Vector::empty&lt;Item&lt;Content&gt;&gt;() });
+        move_to&lt;EventHandle&lt;Put&lt;Content&gt;&gt;&gt;(account, EventHandle&lt;Put&lt;Content&gt;&gt; { event_handle: Event::new_event_handle&lt;Put&lt;Content&gt;&gt;(account) } );
+    }
+
+    public fun put&lt;Content: key + store&gt;(account: &amp;signer, from: address, to: address, content: Content) acquires EventHandle, Outbox {
+        let outbox_owner = Signer::address_of(account);
+        let event_handle = borrow_global_mut&lt;EventHandle&lt;Put&lt;Content&gt;&gt;&gt;(outbox_owner);
+        let outbox = borrow_global_mut&lt;Outbox&lt;Content&gt;&gt;(outbox_owner);
+
+        assert!(to != @0x0, 123);
+
+        Vector::push_back&lt;Item&lt;Content&gt;&gt;(&amp;mut outbox.content, Item&lt;Content&gt;{ from, to, content });
+        Event::emit_event&lt;Put&lt;Content&gt;&gt;(&amp;mut event_handle.event_handle, Put&lt;Content&gt; {});
+    }
+
+    public fun get&lt;Content: key + store&gt;(account: &amp;signer, outbox_owner: address, index: u64): Content acquires Outbox {
+        let account_addr = Signer::address_of(account);
+        let outbox = borrow_global_mut&lt;Outbox&lt;Content&gt;&gt;(outbox_owner);
+
+        let Item&lt;Content&gt;{from, to, content} = Vector::swap_remove&lt;Item&lt;Content&gt;&gt;(&amp;mut outbox.content, index);
+
+        assert!(from == account_addr || to == account_addr, 123);
+
+        content
+    }
+}
+</code></pre>
+<p><em>Now <code>Outbox</code> can be used to retrieve and store resources in transaction scripts, and pass those to modules following the <a href="./script_based_design.html">Script Based Design</a> pattern.</em></p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="hot-potato"><a class="header" href="#hot-potato">Hot Potato</a></h1>
 <table><thead><tr><th></th><th></th></tr></thead><tbody>
 <tr><td><strong>Name</strong></td><td>Hot Potato</td></tr>
@@ -320,6 +431,186 @@ module examples::peace {
 <h2 id="summary-5"><a class="header" href="#summary-5">Summary</a></h2>
 <p>A <strong>Hot Potato</strong> is a struct without <code>key</code>, <code>store</code> and <code>drop</code> <a href="https://move-language.github.io/move/abilities.html">abilities</a> forcing the struct to be used within the transaction it was created in. This is desired in applications like <a href="https://github.com/MystenLabs/sui/blob/a6156aeaf332b9f257cf04063a9a751a7a431360/sui_programmability/examples/defi/sources/flash_lender.move">flash loans</a> where the loans must be initiated and repaid during the same transaction.</p>
 <h2 id="examples-5"><a class="header" href="#examples-5">Examples</a></h2>
+<pre><code class="language-move">// Copyright (c) 2022, Mysten Labs, Inc.
+// SPDX-License-Identifier: Apache-2.0
+
+/// A flash loan that works for any Coin type
+module defi::flash_lender {
+    use sui::balance::{Self, Balance};
+    use sui::coin::{Self, Coin};
+    use sui::object::{Self, ID, UID};
+    use sui::transfer;
+    use sui::tx_context::{Self, TxContext};
+
+    /// A shared object offering flash loans to any buyer willing to pay `fee`.
+    struct FlashLender&lt;phantom T&gt; has key {
+        id: UID,
+        /// Coins available to be lent to prospective borrowers
+        to_lend: Balance&lt;T&gt;,
+        /// Number of `Coin&lt;T&gt;`'s that will be charged for the loan.
+        /// In practice, this would probably be a percentage, but
+        /// we use a flat fee here for simplicity.
+        fee: u64,
+    }
+
+    /// A &quot;hot potato&quot; struct recording the number of `Coin&lt;T&gt;`'s that
+    /// were borrowed. Because this struct does not have the `key` or
+    /// `store` ability, it cannot be transferred or otherwise placed in
+    /// persistent storage. Because it does not have the `drop` ability,
+    /// it cannot be discarded. Thus, the only way to get rid of this
+    /// struct is to call `repay` sometime during the transaction that created it,
+    /// which is exactly what we want from a flash loan.
+    struct Receipt&lt;phantom T&gt; {
+        /// ID of the flash lender object the debt holder borrowed from
+        flash_lender_id: ID,
+        /// Total amount of funds the borrower must repay: amount borrowed + the fee
+        repay_amount: u64
+    }
+
+    /// An object conveying the privilege to withdraw funds from and deposit funds to the
+    /// `FlashLender` instance with ID `flash_lender_id`. Initially granted to the creator
+    /// of the `FlashLender`, and only one `AdminCap` per lender exists.
+    struct AdminCap has key, store {
+        id: UID,
+        flash_lender_id: ID,
+    }
+
+    /// Attempted to borrow more than the `FlashLender` has.
+    /// Try borrowing a smaller amount.
+    const ELoanTooLarge: u64 = 0;
+
+    /// Tried to repay an amount other than `repay_amount` (i.e., the amount borrowed + the fee).
+    /// Try repaying the proper amount.
+    const EInvalidRepaymentAmount: u64 = 1;
+
+    /// Attempted to repay a `FlashLender` that was not the source of this particular debt.
+    /// Try repaying the correct lender.
+    const ERepayToWrongLender: u64 = 2;
+
+    /// Attempted to perform an admin-only operation without valid permissions
+    /// Try using the correct `AdminCap`
+    const EAdminOnly: u64 = 3;
+
+    /// Attempted to withdraw more than the `FlashLender` has.
+    /// Try withdrawing a smaller amount.
+    const EWithdrawTooLarge: u64 = 4;
+
+    // === Creating a flash lender ===
+
+    /// Create a shared `FlashLender` object that makes `to_lend` available for borrowing.
+    /// Any borrower will need to repay the borrowed amount and `fee` by the end of the
+    /// current transaction.
+    public fun new&lt;T&gt;(to_lend: Balance&lt;T&gt;, fee: u64, ctx: &amp;mut TxContext): AdminCap {
+        let id = object::new(ctx);
+        let flash_lender_id = object::uid_to_inner(&amp;id);
+        let flash_lender = FlashLender { id, to_lend, fee };
+        // make the `FlashLender` a shared object so anyone can request loans
+        transfer::share_object(flash_lender);
+
+        // give the creator admin permissions
+        AdminCap { id: object::new(ctx), flash_lender_id }
+    }
+
+    /// Same as `new`, but transfer `WithdrawCap` to the transaction sender
+    public entry fun create&lt;T&gt;(to_lend: Coin&lt;T&gt;, fee: u64, ctx: &amp;mut TxContext) {
+        let balance = coin::into_balance(to_lend);
+        let withdraw_cap = new(balance, fee, ctx);
+
+        transfer::transfer(withdraw_cap, tx_context::sender(ctx))
+    }
+
+    // === Core functionality: requesting a loan and repaying it ===
+
+    /// Request a loan of `amount` from `lender`. The returned `Receipt&lt;T&gt;` &quot;hot potato&quot; ensures
+    /// that the borrower will call `repay(lender, ...)` later on in this tx.
+    /// Aborts if `amount` is greater that the amount that `lender` has available for lending.
+    public fun loan&lt;T&gt;(
+        self: &amp;mut FlashLender&lt;T&gt;, amount: u64, ctx: &amp;mut TxContext
+    ): (Coin&lt;T&gt;, Receipt&lt;T&gt;) {
+        let to_lend = &amp;mut self.to_lend;
+        assert!(balance::value(to_lend) &gt;= amount, ELoanTooLarge);
+        let loan = coin::take(to_lend, amount, ctx);
+        let repay_amount = amount + self.fee;
+        let receipt = Receipt { flash_lender_id: object::id(self), repay_amount };
+
+        (loan, receipt)
+    }
+
+    /// Repay the loan recorded by `receipt` to `lender` with `payment`.
+    /// Aborts if the repayment amount is incorrect or `lender` is not the `FlashLender`
+    /// that issued the original loan.
+    public fun repay&lt;T&gt;(self: &amp;mut FlashLender&lt;T&gt;, payment: Coin&lt;T&gt;, receipt: Receipt&lt;T&gt;) {
+        let Receipt { flash_lender_id, repay_amount } = receipt;
+        assert!(object::id(self) == flash_lender_id, ERepayToWrongLender);
+        assert!(coin::value(&amp;payment) == repay_amount, EInvalidRepaymentAmount);
+
+        coin::put(&amp;mut self.to_lend, payment)
+    }
+
+    // === Admin-only functionality ===
+
+    /// Allow admin for `self` to withdraw funds.
+    public fun withdraw&lt;T&gt;(
+        self: &amp;mut FlashLender&lt;T&gt;,
+        admin_cap: &amp;AdminCap,
+        amount: u64,
+        ctx: &amp;mut TxContext
+    ): Coin&lt;T&gt; {
+        // only the holder of the `AdminCap` for `self` can withdraw funds
+        check_admin(self, admin_cap);
+
+        let to_lend = &amp;mut self.to_lend;
+        assert!(balance::value(to_lend) &gt;= amount, EWithdrawTooLarge);
+        coin::take(to_lend, amount, ctx)
+    }
+
+    /// Allow admin to add more funds to `self`
+    public entry fun deposit&lt;T&gt;(
+        self: &amp;mut FlashLender&lt;T&gt;, admin_cap: &amp;AdminCap, coin: Coin&lt;T&gt;
+    ) {
+        // only the holder of the `AdminCap` for `self` can deposit funds
+        check_admin(self, admin_cap);
+        coin::put(&amp;mut self.to_lend, coin);
+    }
+
+    /// Allow admin to update the fee for `self`
+    public entry fun update_fee&lt;T&gt;(
+        self: &amp;mut FlashLender&lt;T&gt;, admin_cap: &amp;AdminCap, new_fee: u64
+    ) {
+        // only the holder of the `AdminCap` for `self` can update the fee
+        check_admin(self, admin_cap);
+
+        self.fee = new_fee
+    }
+
+    fun check_admin&lt;T&gt;(self: &amp;FlashLender&lt;T&gt;, admin_cap: &amp;AdminCap) {
+        assert!(object::borrow_id(self) == &amp;admin_cap.flash_lender_id, EAdminOnly);
+    }
+
+    // === Reads ===
+
+    /// Return the current fee for `self`
+    public fun fee&lt;T&gt;(self: &amp;FlashLender&lt;T&gt;): u64 {
+        self.fee
+    }
+
+    /// Return the maximum amount available for borrowing
+    public fun max_loan&lt;T&gt;(self: &amp;FlashLender&lt;T&gt;): u64 {
+        balance::value(&amp;self.to_lend)
+    }
+
+    /// Return the amount that the holder of `self` must repay
+    public fun repay_amount&lt;T&gt;(self: &amp;Receipt&lt;T&gt;): u64 {
+        self.repay_amount
+    }
+
+    /// Return the amount that the holder of `self` must repay
+    public fun flash_lender_id&lt;T&gt;(self: &amp;Receipt&lt;T&gt;): ID {
+        self.flash_lender_id
+    }
+}
+</code></pre>
+<p><em>Example for Sui Move is taken from the <a href="https://github.com/MystenLabs/sui/blob/7af627ea406f0d838b4a26ec9c7ce123ed59fc08/sui_programmability/examples/defi/sources/flash_lender.move">Sui repository</a>.</em></p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="script-based-design"><a class="header" href="#script-based-design">Script Based Design</a></h1>
 <table><thead><tr><th></th><th></th></tr></thead><tbody>
 <tr><td><strong>Name</strong></td><td>Script Based Design</td></tr>

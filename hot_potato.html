@@ -160,6 +160,186 @@
 <h2 id="summary"><a class="header" href="#summary">Summary</a></h2>
 <p>A <strong>Hot Potato</strong> is a struct without <code>key</code>, <code>store</code> and <code>drop</code> <a href="https://move-language.github.io/move/abilities.html">abilities</a> forcing the struct to be used within the transaction it was created in. This is desired in applications like <a href="https://github.com/MystenLabs/sui/blob/a6156aeaf332b9f257cf04063a9a751a7a431360/sui_programmability/examples/defi/sources/flash_lender.move">flash loans</a> where the loans must be initiated and repaid during the same transaction.</p>
 <h2 id="examples"><a class="header" href="#examples">Examples</a></h2>
+<pre><code class="language-move">// Copyright (c) 2022, Mysten Labs, Inc.
+// SPDX-License-Identifier: Apache-2.0
+
+/// A flash loan that works for any Coin type
+module defi::flash_lender {
+    use sui::balance::{Self, Balance};
+    use sui::coin::{Self, Coin};
+    use sui::object::{Self, ID, UID};
+    use sui::transfer;
+    use sui::tx_context::{Self, TxContext};
+
+    /// A shared object offering flash loans to any buyer willing to pay `fee`.
+    struct FlashLender&lt;phantom T&gt; has key {
+        id: UID,
+        /// Coins available to be lent to prospective borrowers
+        to_lend: Balance&lt;T&gt;,
+        /// Number of `Coin&lt;T&gt;`'s that will be charged for the loan.
+        /// In practice, this would probably be a percentage, but
+        /// we use a flat fee here for simplicity.
+        fee: u64,
+    }
+
+    /// A &quot;hot potato&quot; struct recording the number of `Coin&lt;T&gt;`'s that
+    /// were borrowed. Because this struct does not have the `key` or
+    /// `store` ability, it cannot be transferred or otherwise placed in
+    /// persistent storage. Because it does not have the `drop` ability,
+    /// it cannot be discarded. Thus, the only way to get rid of this
+    /// struct is to call `repay` sometime during the transaction that created it,
+    /// which is exactly what we want from a flash loan.
+    struct Receipt&lt;phantom T&gt; {
+        /// ID of the flash lender object the debt holder borrowed from
+        flash_lender_id: ID,
+        /// Total amount of funds the borrower must repay: amount borrowed + the fee
+        repay_amount: u64
+    }
+
+    /// An object conveying the privilege to withdraw funds from and deposit funds to the
+    /// `FlashLender` instance with ID `flash_lender_id`. Initially granted to the creator
+    /// of the `FlashLender`, and only one `AdminCap` per lender exists.
+    struct AdminCap has key, store {
+        id: UID,
+        flash_lender_id: ID,
+    }
+
+    /// Attempted to borrow more than the `FlashLender` has.
+    /// Try borrowing a smaller amount.
+    const ELoanTooLarge: u64 = 0;
+
+    /// Tried to repay an amount other than `repay_amount` (i.e., the amount borrowed + the fee).
+    /// Try repaying the proper amount.
+    const EInvalidRepaymentAmount: u64 = 1;
+
+    /// Attempted to repay a `FlashLender` that was not the source of this particular debt.
+    /// Try repaying the correct lender.
+    const ERepayToWrongLender: u64 = 2;
+
+    /// Attempted to perform an admin-only operation without valid permissions
+    /// Try using the correct `AdminCap`
+    const EAdminOnly: u64 = 3;
+
+    /// Attempted to withdraw more than the `FlashLender` has.
+    /// Try withdrawing a smaller amount.
+    const EWithdrawTooLarge: u64 = 4;
+
+    // === Creating a flash lender ===
+
+    /// Create a shared `FlashLender` object that makes `to_lend` available for borrowing.
+    /// Any borrower will need to repay the borrowed amount and `fee` by the end of the
+    /// current transaction.
+    public fun new&lt;T&gt;(to_lend: Balance&lt;T&gt;, fee: u64, ctx: &amp;mut TxContext): AdminCap {
+        let id = object::new(ctx);
+        let flash_lender_id = object::uid_to_inner(&amp;id);
+        let flash_lender = FlashLender { id, to_lend, fee };
+        // make the `FlashLender` a shared object so anyone can request loans
+        transfer::share_object(flash_lender);
+
+        // give the creator admin permissions
+        AdminCap { id: object::new(ctx), flash_lender_id }
+    }
+
+    /// Same as `new`, but transfer `WithdrawCap` to the transaction sender
+    public entry fun create&lt;T&gt;(to_lend: Coin&lt;T&gt;, fee: u64, ctx: &amp;mut TxContext) {
+        let balance = coin::into_balance(to_lend);
+        let withdraw_cap = new(balance, fee, ctx);
+
+        transfer::transfer(withdraw_cap, tx_context::sender(ctx))
+    }
+
+    // === Core functionality: requesting a loan and repaying it ===
+
+    /// Request a loan of `amount` from `lender`. The returned `Receipt&lt;T&gt;` &quot;hot potato&quot; ensures
+    /// that the borrower will call `repay(lender, ...)` later on in this tx.
+    /// Aborts if `amount` is greater that the amount that `lender` has available for lending.
+    public fun loan&lt;T&gt;(
+        self: &amp;mut FlashLender&lt;T&gt;, amount: u64, ctx: &amp;mut TxContext
+    ): (Coin&lt;T&gt;, Receipt&lt;T&gt;) {
+        let to_lend = &amp;mut self.to_lend;
+        assert!(balance::value(to_lend) &gt;= amount, ELoanTooLarge);
+        let loan = coin::take(to_lend, amount, ctx);
+        let repay_amount = amount + self.fee;
+        let receipt = Receipt { flash_lender_id: object::id(self), repay_amount };
+
+        (loan, receipt)
+    }
+
+    /// Repay the loan recorded by `receipt` to `lender` with `payment`.
+    /// Aborts if the repayment amount is incorrect or `lender` is not the `FlashLender`
+    /// that issued the original loan.
+    public fun repay&lt;T&gt;(self: &amp;mut FlashLender&lt;T&gt;, payment: Coin&lt;T&gt;, receipt: Receipt&lt;T&gt;) {
+        let Receipt { flash_lender_id, repay_amount } = receipt;
+        assert!(object::id(self) == flash_lender_id, ERepayToWrongLender);
+        assert!(coin::value(&amp;payment) == repay_amount, EInvalidRepaymentAmount);
+
+        coin::put(&amp;mut self.to_lend, payment)
+    }
+
+    // === Admin-only functionality ===
+
+    /// Allow admin for `self` to withdraw funds.
+    public fun withdraw&lt;T&gt;(
+        self: &amp;mut FlashLender&lt;T&gt;,
+        admin_cap: &amp;AdminCap,
+        amount: u64,
+        ctx: &amp;mut TxContext
+    ): Coin&lt;T&gt; {
+        // only the holder of the `AdminCap` for `self` can withdraw funds
+        check_admin(self, admin_cap);
+
+        let to_lend = &amp;mut self.to_lend;
+        assert!(balance::value(to_lend) &gt;= amount, EWithdrawTooLarge);
+        coin::take(to_lend, amount, ctx)
+    }
+
+    /// Allow admin to add more funds to `self`
+    public entry fun deposit&lt;T&gt;(
+        self: &amp;mut FlashLender&lt;T&gt;, admin_cap: &amp;AdminCap, coin: Coin&lt;T&gt;
+    ) {
+        // only the holder of the `AdminCap` for `self` can deposit funds
+        check_admin(self, admin_cap);
+        coin::put(&amp;mut self.to_lend, coin);
+    }
+
+    /// Allow admin to update the fee for `self`
+    public entry fun update_fee&lt;T&gt;(
+        self: &amp;mut FlashLender&lt;T&gt;, admin_cap: &amp;AdminCap, new_fee: u64
+    ) {
+        // only the holder of the `AdminCap` for `self` can update the fee
+        check_admin(self, admin_cap);
+
+        self.fee = new_fee
+    }
+
+    fun check_admin&lt;T&gt;(self: &amp;FlashLender&lt;T&gt;, admin_cap: &amp;AdminCap) {
+        assert!(object::borrow_id(self) == &amp;admin_cap.flash_lender_id, EAdminOnly);
+    }
+
+    // === Reads ===
+
+    /// Return the current fee for `self`
+    public fun fee&lt;T&gt;(self: &amp;FlashLender&lt;T&gt;): u64 {
+        self.fee
+    }
+
+    /// Return the maximum amount available for borrowing
+    public fun max_loan&lt;T&gt;(self: &amp;FlashLender&lt;T&gt;): u64 {
+        balance::value(&amp;self.to_lend)
+    }
+
+    /// Return the amount that the holder of `self` must repay
+    public fun repay_amount&lt;T&gt;(self: &amp;Receipt&lt;T&gt;): u64 {
+        self.repay_amount
+    }
+
+    /// Return the amount that the holder of `self` must repay
+    public fun flash_lender_id&lt;T&gt;(self: &amp;Receipt&lt;T&gt;): ID {
+        self.flash_lender_id
+    }
+}
+</code></pre>
+<p><em>Example for Sui Move is taken from the <a href="https://github.com/MystenLabs/sui/blob/7af627ea406f0d838b4a26ec9c7ce123ed59fc08/sui_programmability/examples/defi/sources/flash_lender.move">Sui repository</a>.</em></p>
 
                     </main>
 
