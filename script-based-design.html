@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Nestable Resources - Move Patterns: Design Patterns for Resource Based Programming</title>
+        <title>Script Based Design - Move Patterns: Design Patterns for Resource Based Programming</title>
                 
 
         <!-- Custom HTML head -->
@@ -82,7 +82,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded affix "><a href="index.html">Introduction</a></li><li class="chapter-item expanded affix "><li class="part-title">Design Patterns</li><li class="chapter-item expanded "><a href="capability.html"><strong aria-hidden="true">1.</strong> Capability</a></li><li class="chapter-item expanded "><a href="multiple_configurations.html"><strong aria-hidden="true">2.</strong> Multiple Configurations</a></li><li class="chapter-item expanded "><a href="nestable_resources.html" class="active"><strong aria-hidden="true">3.</strong> Nestable Resources</a></li><li class="chapter-item expanded "><a href="witness.html"><strong aria-hidden="true">4.</strong> Witness</a></li><li class="chapter-item expanded "><a href="accountless_design.html"><strong aria-hidden="true">5.</strong> Accountless Design</a></li><li class="chapter-item expanded "><a href="hot_potato.html"><strong aria-hidden="true">6.</strong> Hot Potato</a></li><li class="chapter-item expanded "><a href="script_based_design.html"><strong aria-hidden="true">7.</strong> Script Based Design</a></li><li class="chapter-item expanded "><a href="transferable_witness.html"><strong aria-hidden="true">8.</strong> Transferable Witness</a></li></ol>            </div>
+                <ol class="chapter"><li class="chapter-item expanded affix "><a href="index.html">Introduction</a></li><li class="chapter-item expanded affix "><li class="part-title">Design Patterns</li><li class="chapter-item expanded "><a href="capability.html"><strong aria-hidden="true">1.</strong> Capability</a></li><li class="chapter-item expanded "><a href="multiple-configurations.html"><strong aria-hidden="true">2.</strong> Multiple Configurations</a></li><li class="chapter-item expanded "><a href="nestable-resources.html"><strong aria-hidden="true">3.</strong> Nestable Resources</a></li><li class="chapter-item expanded "><a href="witness.html"><strong aria-hidden="true">4.</strong> Witness</a></li><li class="chapter-item expanded "><a href="accountless-design.html"><strong aria-hidden="true">5.</strong> Accountless Design</a></li><li class="chapter-item expanded "><a href="hot-potato.html"><strong aria-hidden="true">6.</strong> Hot Potato</a></li><li class="chapter-item expanded "><a href="script-based-design.html" class="active"><strong aria-hidden="true">7.</strong> Script Based Design</a></li><li class="chapter-item expanded "><a href="transferable-witness.html"><strong aria-hidden="true">8.</strong> Transferable Witness</a></li></ol>            </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
 
@@ -120,7 +120,7 @@
                                                                         <a href="https://github.com/villesundell/move-patterns" title="Git repository" aria-label="Git repository">
                             <i id="git-repository-button" class="fa fa-github"></i>
                         </a>
-                                                                        <a href="https://github.com/villesundell/move-patterns/edit/main/src/nestable_resources.md" title="Suggest an edit" aria-label="Suggest an edit">
+                                                                        <a href="https://github.com/villesundell/move-patterns/edit/main/src/script-based-design.md" title="Suggest an edit" aria-label="Suggest an edit">
                             <i id="git-edit-button" class="fa fa-edit"></i>
                         </a>
                         
@@ -149,87 +149,27 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="nestable-resources"><a class="header" href="#nestable-resources">Nestable Resources</a></h1>
+                        <h1 id="script-based-design"><a class="header" href="#script-based-design">Script Based Design</a></h1>
 <table><thead><tr><th></th><th></th></tr></thead><tbody>
-<tr><td><strong>Name</strong></td><td>Nestable Resources</td></tr>
+<tr><td><strong>Name</strong></td><td>Script Based Design</td></tr>
 <tr><td><strong>Origin</strong></td><td><a href="https://github.com/villesundell">Ville Sundell</a></td></tr>
-<tr><td><strong>Example</strong></td><td><a href="https://github.com/taoheorg/taohe">TaoHe project</a></td></tr>
-<tr><td><strong>Depends on</strong></td><td>None</td></tr>
+<tr><td><strong>Example</strong></td><td>Diem Forum post lost, April 18 2022</td></tr>
+<tr><td><strong>Depends on</strong></td><td><a href="./accountless_design.html">Accountless Design</a></td></tr>
 <tr><td><strong>Known to work on</strong></td><td>Move</td></tr>
 </tbody></table>
 <h2 id="summary"><a class="header" href="#summary">Summary</a></h2>
-<p><strong>Nestable Resources</strong> pattern provides a resource native approach to code reuse by building a nested structure of resources where each resource can be detached for use if the conditions are satisfied. For example, tokens can be placed into a time locked resource, which in turn can be placed into a resource which can be used only by a certain user, effectively creating a timelocked non-fungible token. For cleaner design and easier integration it is recommended that the nestable resources share a common interface for wrapping and unwrapping.</p>
+<p><strong>Script Based Design</strong> combines <a href="./accountless_design.html">Accountless Design</a> with <em>Move Transaction Scripts</em> enabling a design where most of the business logic resides in transaction scripts, while keeping the most critical parts in modules. This way the transaction scripts can be developed and improved faster than a regular module would, while providing the same kind of guarantees as regular modules by keeping the most critical part (state transitions) in modules.</p>
 <h2 id="examples"><a class="header" href="#examples">Examples</a></h2>
-<pre><code class="language-move">/// A nested resource (tao) for implementing a simple ownership model: owner can extract
-/// the content.
-module 0x1::Ownable {
-    use Std::Signer;
-
-    /// Simple ownership tao: the `owner` can extract `content`.
-    struct Tao&lt;Content&gt; has key, store {
-        owner: address,
-        content: Content
-    }
-
-    /// Wrapping `content` into a tao the `owner` can only extract.
-    public fun wrap&lt;Content&gt;(owner: address, content: Content): Tao&lt;Content&gt; {
-        Tao&lt;Content&gt; { owner, content }
-    }
-
-    /// Immutable read-only reference to the owner address, and `content`.
-    public fun read&lt;Content&gt;(tao: &amp;Tao&lt;Content&gt;): (&amp;address, &amp;Content) {
-        let Tao&lt;Content&gt; { owner, content } = tao;
-
-        (owner, content)
-    }
-
-    /// If `account ` is the `owner`, extract `content`.
-    public fun unwrap&lt;Content&gt;(account: &amp;signer, tao: Tao&lt;Content&gt;): Content {
-        let Tao&lt;Content&gt; { owner, content } = tao;
-
-        assert!(owner == Signer::address_of(account), 123);
-
-        content
-    }
-}
-</code></pre>
-<pre><code class="language-move">/// A folder tao to store an arbitrary number of taos.
-module 0x1::Folder {
-    /// A simple tao struct containing a vector of resources.
-    struct Tao&lt;Content&gt; has key, store {
-        content: vector&lt;Content&gt;
-    }
-
-    /// Create a new tao, with the static set of resources inside it.
-    public fun wrap&lt;Content&gt;(content: vector&lt;Content&gt;): Tao&lt;Content&gt; {
-        Tao&lt;Content&gt; { content }
-    }
-
-    /// Immutable read-only reference to the vector containing resources.
-    public fun read&lt;Content&gt;(tao: &amp;Tao&lt;Content&gt;): &amp;vector&lt;Content&gt; {
-        let Tao&lt;Content&gt; { content } = tao;
-
-        content
-    }
-
-    /// Destroy the tao, and return the static set of resources inside it.
-    public fun unwrap&lt;Content&gt;(tao: Tao&lt;Content&gt;): vector&lt;Content&gt; {
-        let Tao&lt;Content&gt; { content } = tao;
-
-        content
-    }
-</code></pre>
-<p><em>A token can be placed inside <code>Ownable</code> and it can be placed inside <code>Folder</code>, or other way around, if so desired.</em></p>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                                                    <a rel="prev" href="multiple_configurations.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                                    <a rel="prev" href="hot-potato.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
                         
-                                                    <a rel="next" href="witness.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                                    <a rel="next" href="transferable-witness.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
                         
@@ -239,11 +179,11 @@ module 0x1::Folder {
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                                    <a rel="prev" href="multiple_configurations.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                    <a rel="prev" href="hot-potato.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
                 
-                                    <a rel="next" href="witness.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                    <a rel="next" href="transferable-witness.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
                             </nav>

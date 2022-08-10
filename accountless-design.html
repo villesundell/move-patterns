@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Script Based Design - Move Patterns: Design Patterns for Resource Based Programming</title>
+        <title>Accountless Design - Move Patterns: Design Patterns for Resource Based Programming</title>
                 
 
         <!-- Custom HTML head -->
@@ -82,7 +82,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded affix "><a href="index.html">Introduction</a></li><li class="chapter-item expanded affix "><li class="part-title">Design Patterns</li><li class="chapter-item expanded "><a href="capability.html"><strong aria-hidden="true">1.</strong> Capability</a></li><li class="chapter-item expanded "><a href="multiple_configurations.html"><strong aria-hidden="true">2.</strong> Multiple Configurations</a></li><li class="chapter-item expanded "><a href="nestable_resources.html"><strong aria-hidden="true">3.</strong> Nestable Resources</a></li><li class="chapter-item expanded "><a href="witness.html"><strong aria-hidden="true">4.</strong> Witness</a></li><li class="chapter-item expanded "><a href="accountless_design.html"><strong aria-hidden="true">5.</strong> Accountless Design</a></li><li class="chapter-item expanded "><a href="hot_potato.html"><strong aria-hidden="true">6.</strong> Hot Potato</a></li><li class="chapter-item expanded "><a href="script_based_design.html" class="active"><strong aria-hidden="true">7.</strong> Script Based Design</a></li><li class="chapter-item expanded "><a href="transferable_witness.html"><strong aria-hidden="true">8.</strong> Transferable Witness</a></li></ol>            </div>
+                <ol class="chapter"><li class="chapter-item expanded affix "><a href="index.html">Introduction</a></li><li class="chapter-item expanded affix "><li class="part-title">Design Patterns</li><li class="chapter-item expanded "><a href="capability.html"><strong aria-hidden="true">1.</strong> Capability</a></li><li class="chapter-item expanded "><a href="multiple-configurations.html"><strong aria-hidden="true">2.</strong> Multiple Configurations</a></li><li class="chapter-item expanded "><a href="nestable-resources.html"><strong aria-hidden="true">3.</strong> Nestable Resources</a></li><li class="chapter-item expanded "><a href="witness.html"><strong aria-hidden="true">4.</strong> Witness</a></li><li class="chapter-item expanded "><a href="accountless-design.html" class="active"><strong aria-hidden="true">5.</strong> Accountless Design</a></li><li class="chapter-item expanded "><a href="hot-potato.html"><strong aria-hidden="true">6.</strong> Hot Potato</a></li><li class="chapter-item expanded "><a href="script-based-design.html"><strong aria-hidden="true">7.</strong> Script Based Design</a></li><li class="chapter-item expanded "><a href="transferable-witness.html"><strong aria-hidden="true">8.</strong> Transferable Witness</a></li></ol>            </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
 
@@ -120,7 +120,7 @@
                                                                         <a href="https://github.com/villesundell/move-patterns" title="Git repository" aria-label="Git repository">
                             <i id="git-repository-button" class="fa fa-github"></i>
                         </a>
-                                                                        <a href="https://github.com/villesundell/move-patterns/edit/main/src/script_based_design.md" title="Suggest an edit" aria-label="Suggest an edit">
+                                                                        <a href="https://github.com/villesundell/move-patterns/edit/main/src/accountless-design.md" title="Suggest an edit" aria-label="Suggest an edit">
                             <i id="git-edit-button" class="fa fa-edit"></i>
                         </a>
                         
@@ -149,27 +149,78 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="script-based-design"><a class="header" href="#script-based-design">Script Based Design</a></h1>
+                        <h1 id="accountless-design"><a class="header" href="#accountless-design">Accountless Design</a></h1>
 <table><thead><tr><th></th><th></th></tr></thead><tbody>
-<tr><td><strong>Name</strong></td><td>Script Based Design</td></tr>
+<tr><td><strong>Name</strong></td><td>Accountless Design</td></tr>
 <tr><td><strong>Origin</strong></td><td><a href="https://github.com/villesundell">Ville Sundell</a></td></tr>
-<tr><td><strong>Example</strong></td><td>Diem Forum post lost, April 18 2022</td></tr>
-<tr><td><strong>Depends on</strong></td><td><a href="./accountless_design.html">Accountless Design</a></td></tr>
+<tr><td><strong>Example</strong></td><td><a href="https://web.archive.org/web/20220202065315/https://community.diem.com/t/outbox-an-alternative-way-to-store-resources/3737">Diem Forum Post</a></td></tr>
+<tr><td><strong>Depends on</strong></td><td>None</td></tr>
 <tr><td><strong>Known to work on</strong></td><td>Move</td></tr>
 </tbody></table>
 <h2 id="summary"><a class="header" href="#summary">Summary</a></h2>
-<p><strong>Script Based Design</strong> combines <a href="./accountless_design.html">Accountless Design</a> with <em>Move Transaction Scripts</em> enabling a design where most of the business logic resides in transaction scripts, while keeping the most critical parts in modules. This way the transaction scripts can be developed and improved faster than a regular module would, while providing the same kind of guarantees as regular modules by keeping the most critical part (state transitions) in modules.</p>
+<p>Move module following the <strong>Accountless Design</strong> pattern doesn't handle storage (<code>move_to()</code> / <code>move_from()</code>) directly, instead the storage must be handled outside the module in transaction scripts. This makes the module code footprint smaller, design simpler, implementation more portable and provides a way to implement storage agnostic smart contract design on some Move powered platforms.</p>
 <h2 id="examples"><a class="header" href="#examples">Examples</a></h2>
+<pre><code class="language-move">module 0x1::Outbox {
+    use Std::Event;
+    use Std::Signer;
+    use Std::Vector;
+
+    struct Item&lt;Content: key + store&gt; has key, store {
+        from: address,
+        to: address,
+        content: Content
+    }
+
+    struct Outbox&lt;Content: key + store&gt; has key, store {
+        content: vector&lt;Item&lt;Content&gt;&gt;
+    }
+
+    struct Put&lt;phantom Content&gt; has key, drop, store {
+    }
+
+    struct EventHandle&lt;phantom Content: drop + store&gt; has key, store {
+        event_handle: Event::EventHandle&lt;Content&gt;
+    }
+
+    public fun create&lt;Content: key + store&gt;(account: &amp;signer) {
+        move_to&lt;Outbox&lt;Content&gt;&gt;(account, Outbox&lt;Content&gt; { content: Vector::empty&lt;Item&lt;Content&gt;&gt;() });
+        move_to&lt;EventHandle&lt;Put&lt;Content&gt;&gt;&gt;(account, EventHandle&lt;Put&lt;Content&gt;&gt; { event_handle: Event::new_event_handle&lt;Put&lt;Content&gt;&gt;(account) } );
+    }
+
+    public fun put&lt;Content: key + store&gt;(account: &amp;signer, from: address, to: address, content: Content) acquires EventHandle, Outbox {
+        let outbox_owner = Signer::address_of(account);
+        let event_handle = borrow_global_mut&lt;EventHandle&lt;Put&lt;Content&gt;&gt;&gt;(outbox_owner);
+        let outbox = borrow_global_mut&lt;Outbox&lt;Content&gt;&gt;(outbox_owner);
+
+        assert!(to != @0x0, 123);
+
+        Vector::push_back&lt;Item&lt;Content&gt;&gt;(&amp;mut outbox.content, Item&lt;Content&gt;{ from, to, content });
+        Event::emit_event&lt;Put&lt;Content&gt;&gt;(&amp;mut event_handle.event_handle, Put&lt;Content&gt; {});
+    }
+
+    public fun get&lt;Content: key + store&gt;(account: &amp;signer, outbox_owner: address, index: u64): Content acquires Outbox {
+        let account_addr = Signer::address_of(account);
+        let outbox = borrow_global_mut&lt;Outbox&lt;Content&gt;&gt;(outbox_owner);
+
+        let Item&lt;Content&gt;{from, to, content} = Vector::swap_remove&lt;Item&lt;Content&gt;&gt;(&amp;mut outbox.content, index);
+
+        assert!(from == account_addr || to == account_addr, 123);
+
+        content
+    }
+}
+</code></pre>
+<p><em>Now <code>Outbox</code> can be used to retrieve and store resources in transaction scripts, and pass those to modules following the <a href="./script_based_design.html">Script Based Design</a> pattern.</em></p>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                                                    <a rel="prev" href="hot_potato.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                                    <a rel="prev" href="witness.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
                         
-                                                    <a rel="next" href="transferable_witness.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                                    <a rel="next" href="hot-potato.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
                         
@@ -179,11 +230,11 @@
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                                    <a rel="prev" href="hot_potato.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                    <a rel="prev" href="witness.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
                 
-                                    <a rel="next" href="transferable_witness.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                    <a rel="next" href="hot-potato.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
                             </nav>
